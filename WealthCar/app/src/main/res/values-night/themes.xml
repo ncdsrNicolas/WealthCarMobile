@@ -1,0 +1,7 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.WealthCar_teste" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Force light colors even in night mode folder -->
+        <item name="colorPrimary">@color/WC_blue</item>
+    </style>
+</resources>
