@@ -8,7 +8,6 @@
     android:background="@color/WC_screen_bg"
     tools:context=".HomeActivity">
 
-    <!-- Card Principal (Topo) - Sem sombra -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_main_info"
         android:layout_width="match_parent"
@@ -40,13 +39,25 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="16dp"
-                android:text="Onix Plus"
+                tools:text="Meu Lancer"
                 android:textColor="@color/white"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toStartOf="@+id/iv_car_image"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_vehicle_label" />
+
+            <TextView
+                android:id="@+id/tv_vehicle_details"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                tools:text="Mitsubishi Lancer • 2014"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                app:layout_constraintEnd_toStartOf="@+id/iv_car_image"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_vehicle_name" />
 
             <TextView
                 android:id="@+id/tv_plate_label"
@@ -57,13 +68,13 @@
                 android:textColor="#B3FFFFFF"
                 android:textSize="12sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tv_vehicle_name" />
+                app:layout_constraintTop_toBottomOf="@id/tv_vehicle_details"/>
 
             <TextView
                 android:id="@+id/tv_plate_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ABC-1234"
+                tools:text="ABC-1234"
                 android:textColor="@color/white"
                 android:textSize="18sp"
                 android:textStyle="bold"
@@ -91,7 +102,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="ESP32 Ativo"
+                    tools:text="ESP32 Ativo"
                     android:textColor="@color/white"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -102,7 +113,7 @@
                 android:layout_width="110dp"
                 android:layout_height="110dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/wealth_car_logo"
+                android:src="@drawable/logo_wealthcar"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -110,7 +121,6 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Grid de Informações (Meio) - Sem sombra -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_odometer"
         android:layout_width="0dp"
@@ -147,9 +157,10 @@
                 android:textSize="12sp" />
 
             <TextView
+                android:id="@+id/tv_odometer_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="25.430 km"
+                tools:text="25.430 km"
                 android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -192,9 +203,10 @@
                 android:textSize="12sp" />
 
             <TextView
+                android:id="@+id/tv_fuel_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="75%"
+                tools:text="75%"
                 android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -237,9 +249,10 @@
                 android:textSize="12sp" />
 
             <TextView
+                android:id="@+id/tv_revision_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="570 km"
+                tools:text="570 km"
                 android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -282,16 +295,16 @@
                 android:textSize="12sp" />
 
             <TextView
+                android:id="@+id/tv_health_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Excelente"
+                tools:text="Excelente"
                 android:textColor="@color/status_green"
                 android:textSize="16sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Notificações - Sem sombra -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_notifications"
         android:layout_width="match_parent"
@@ -314,15 +327,16 @@
                 android:layout_height="match_parent"
                 android:layout_marginTop="8dp">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
                     <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingVertical="10dp" android:text="Movimentação detectada" android:textColor="@color/black" />
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/WC_edt_gray" />
                     <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingVertical="10dp" android:text="ESP32 conectado" android:textColor="@color/black" />
+
                 </LinearLayout>
             </androidx.core.widget.NestedScrollView>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Barra de Navegação Inferior -->
     <FrameLayout
         android:id="@+id/bottom_nav_container"
         android:layout_width="match_parent"
@@ -348,7 +362,6 @@
             app:pressedTranslationZ="0dp"
             app:tint="@color/white" />
 
-        <!-- Ícone de Perfil com Borda e Estilo -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_profile"
             android:layout_width="38dp"
@@ -363,12 +376,10 @@
             app:strokeColor="@color/WC_dark_blue">
 
             <ImageView
-                android:id="@+id/iv_profile"
-                android:layout_width="match_parent"
+                android:id="@+id/iv_profile" android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:padding="4dp"
-                android:src="@drawable/ic_user_profile"
-                app:tint="@color/WC_blue" />
+                android:src="@drawable/ic_logout" app:tint="@color/WC_blue" />
         </com.google.android.material.card.MaterialCardView>
     </FrameLayout>
 

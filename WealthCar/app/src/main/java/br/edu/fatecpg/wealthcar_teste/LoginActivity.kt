@@ -7,7 +7,13 @@ import android.util.Patterns
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputEditText
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.launch
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.postgrest.postgrest
 
 class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,8 +29,8 @@ class LoginActivity : AppCompatActivity() {
             val email = etEmail.text.toString()
             val password = etPassword.text.toString()
 
-            if (email.isEmpty()) {
-                showCustomToast("O e-mail não pode estar vazio")
+            if (email.isEmpty() || password.isEmpty()) {
+                showCustomToast("Preencha e-mail e senha")
                 return@setOnClickListener
             }
 
@@ -33,22 +39,43 @@ class LoginActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-            val savedEmail = sharedPreferences.getString("email", "")
-            val savedPassword = sharedPreferences.getString("password", "")
+            // INÍCIO DA INTEGRAÇÃO COM SUPABASE
+            lifecycleScope.launch {
+                try {
+                    SupabaseClient.client.auth.signInWith(Email) {
+                        this.email = email
+                        this.password = password
+                    }
 
-            if (email == savedEmail && password == savedPassword) {
-                showCustomToast("Login realizado com sucesso!")
-                val intent = Intent(this, HomeActivity::class.java)
-                // Limpa a pilha de atividades para que a Home seja a única aberta
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                finish()
-            } else {
-                showCustomToast("Email ou senha incorretos")
+                    // Verifica se já tem veículo cadastrado
+                    val user = SupabaseClient.client.auth.currentUserOrNull()!!
+                    val resultado = SupabaseClient.client
+                        .postgrest["veiculo"]
+                        .select {
+                            filter { eq("id_usuario", user.id) }
+                        }
+                        .decodeList<kotlinx.serialization.json.JsonObject>()
+
+                    showCustomToast("Login realizado com sucesso!")
+
+                    // Primeira vez → VehicleActivity | Já tem → HomeActivity
+                    val destino = if (resultado.isEmpty()) {
+                        VehicleActivity::class.java
+                    } else {
+                        HomeActivity::class.java
+                    }
+
+                    val intent = Intent(this@LoginActivity, destino)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+
+                } catch (e: Exception) {
+                    android.util.Log.e("WealthCar", "Erro no login", e)
+                    showCustomToast("Email ou senha incorretos")
+                }
             }
         }
-
         tvIrCadastro.setOnClickListener {
             val intent = Intent(this, RegisterActivity::class.java)
             startActivity(intent)
