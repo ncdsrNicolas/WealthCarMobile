@@ -110,9 +110,9 @@
 
             <ImageView
                 android:id="@+id/iv_car_image"
-                android:layout_width="110dp"
-                android:layout_height="110dp"
-                android:scaleType="centerInside"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:scaleType="fitCenter"
                 android:src="@drawable/logo_wealthcar"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -355,7 +355,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal|top"
             android:contentDescription="Scanner"
-            android:src="@android:drawable/ic_menu_camera"
+            android:src="@drawable/ic_directions_car"
             app:backgroundTint="@color/WC_dark_blue"
             app:elevation="0dp"
             app:fabSize="normal"

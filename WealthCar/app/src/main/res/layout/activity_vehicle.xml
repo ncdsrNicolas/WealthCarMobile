@@ -18,7 +18,7 @@
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="#150f8c"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="6dp"/>
 
         <TextView
             android:layout_width="match_parent"
@@ -40,29 +40,43 @@
                 android:layout_height="wrap_content"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Marca -->
-        <com.google.android.material.textfield.TextInputLayout
+        <!-- Label Marca -->
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Marca *"
-            android:layout_marginBottom="12dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etVehicleMarca"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-        </com.google.android.material.textfield.TextInputLayout>
+            android:text="Marca *"
+            android:textSize="12sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp"/>
 
-        <!-- Modelo -->
-        <com.google.android.material.textfield.TextInputLayout
+        <!-- Spinner Marca -->
+        <Spinner
+            android:id="@+id/spinnerMarca"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/spinner_background"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"/>
+
+        <!-- Label Modelo -->
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Modelo *"
-            android:layout_marginBottom="12dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etVehicleModelo"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-        </com.google.android.material.textfield.TextInputLayout>
+            android:text="Modelo *"
+            android:textSize="12sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp"/>
+
+        <!-- Spinner Modelo -->
+        <Spinner
+            android:id="@+id/spinnerModelo"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/spinner_background"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"/>
 
         <!-- Ano -->
         <com.google.android.material.textfield.TextInputLayout
@@ -82,7 +96,7 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Placa *"
+            android:hint="Placa * (somente letras maiúsculas e números)"
             android:layout_marginBottom="12dp">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etVehiclePlaca"
@@ -92,7 +106,20 @@
                 android:maxLength="8"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Combustível -->
+        <!-- Quilometragem -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Quilometragem atual (km)"
+            android:layout_marginBottom="12dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etVehicleQuilometragem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Label Combustível -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -101,26 +128,17 @@
             android:textColor="#666666"
             android:layout_marginBottom="4dp"/>
 
+        <!-- Spinner Combustível -->
         <Spinner
             android:id="@+id/spinnerCombustivel"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:layout_marginBottom="12dp"/>
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/spinner_background"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"/>
 
-        <!-- Quilometragem -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Quilometragem atual (km)"
-            android:layout_marginBottom="24dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etVehicleQuilometragem"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="number"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Botão -->
+        <!-- Botão salvar -->
         <Button
             android:id="@+id/btnSalvarVeiculo"
             android:layout_width="match_parent"
