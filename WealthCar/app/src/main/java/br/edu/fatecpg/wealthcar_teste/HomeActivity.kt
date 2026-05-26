@@ -237,11 +237,14 @@ class HomeActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == SELECT_CODE && resultCode == Activity.RESULT_OK) {
-            val device: BluetoothDevice? =
-                data?.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE)
+            val scanResult = data?.getParcelableExtra<android.bluetooth.le.ScanResult>(
+                CompanionDeviceManager.EXTRA_DEVICE
+            )
+            val device = scanResult?.device
 
             if (device != null) {
                 BLEManager.conectarDispositivo(this, device)
+                showCustomToast("Conectando ao dispositivo...")
             } else {
                 showCustomToast("Nenhum dispositivo selecionado")
             }
