@@ -6,6 +6,7 @@ import android.bluetooth.le.*
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import org.json.JSONObject
 import java.util.UUID
 
 /* ─── UUIDs — confirmar com o colega de hardware ─────────────────── */
@@ -28,7 +29,6 @@ enum class BLEStatus {
 @SuppressLint("MissingPermission")
 object BLEManager {
 
-    /* StateFlows observáveis pelas Activities */
     private val _status = MutableStateFlow(BLEStatus.DESCONECTADO)
     val status: StateFlow<BLEStatus> = _status
 
@@ -45,8 +45,7 @@ object BLEManager {
 
     /* ── Iniciar escaneamento ── */
     fun escanear(context: Context) {
-        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE)
-                as BluetoothManager).adapter
+        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
 
         if (adapter == null || !adapter.isEnabled) {
             _erro.value = "Bluetooth desativado. Ative e tente novamente."
@@ -59,17 +58,17 @@ object BLEManager {
         scanner = adapter.bluetoothLeScanner
 
         val filtro = ScanFilter.Builder()
-            .setDeviceName("WealthCar-ESP32") // nome anunciado pelo ESP32
+            .setDeviceName("WealthCar-ESP32")
             .build()
 
         val config = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
 
-        scanner?.startScan(listOf(filtro), config, scanCallback(context))
-
         val callback = scanCallback(context)
-        currentScanCallback = callback // ← salva referência
+        currentScanCallback = callback // Salva a referência corretamente
+
+        // CORREÇÃO: Apenas UMA chamada de startScan
         scanner?.startScan(listOf(filtro), config, callback)
     }
 
@@ -77,7 +76,7 @@ object BLEManager {
     private fun scanCallback(context: Context) = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             super.onScanResult(callbackType, result)
-            scanner?.stopScan(this) // para de escanear ao encontrar
+            scanner?.stopScan(this)
             conectar(context, result.device)
         }
 
@@ -93,10 +92,7 @@ object BLEManager {
 
         bluetoothGatt = device.connectGatt(context, false, object : BluetoothGattCallback() {
 
-            /* Conexão estabelecida */
-            override fun onConnectionStateChange(
-                gatt: BluetoothGatt, status: Int, newState: Int
-            ) {
+            override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 when (newState) {
                     BluetoothProfile.STATE_CONNECTED -> {
                         _status.value = BLEStatus.CONECTADO
@@ -110,11 +106,8 @@ object BLEManager {
                 }
             }
 
-            /* Serviços descobertos — ativa notificações */
             override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-                val characteristic = gatt
-                    .getService(SERVICE_UUID)
-                    ?.getCharacteristic(CHARACTERISTIC_UUID)
+                val characteristic = gatt.getService(SERVICE_UUID)?.getCharacteristic(CHARACTERISTIC_UUID)
 
                 if (characteristic == null) {
                     _erro.value  = "Característica BLE não encontrada"
@@ -122,22 +115,15 @@ object BLEManager {
                     return
                 }
 
-                // Ativa notificações
                 gatt.setCharacteristicNotification(characteristic, true)
-                val descriptor = characteristic.getDescriptor(
-                    UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
-                )
+                val descriptor = characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
                 descriptor?.let {
                     it.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                     gatt.writeDescriptor(it)
                 }
             }
 
-            /* Dados recebidos do ESP32 */
-            override fun onCharacteristicChanged(
-                gatt: BluetoothGatt,
-                characteristic: BluetoothGattCharacteristic
-            ) {
+            override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
                 val texto = String(characteristic.value, Charsets.UTF_8)
                 parsearDados(texto)
             }
@@ -147,14 +133,16 @@ object BLEManager {
     /* ── Parsear JSON do ESP32 ── */
     private fun parsearDados(json: String) {
         try {
-            // Formato esperado: {"vel":87,"rpm":2400,"comb":62,"hodo":1050}
-            val vel  = Regex(""""vel"\s*:\s*(\d+)""").find(json)?.groupValues?.get(1)?.toInt() ?: 0
-            val rpm  = Regex(""""rpm"\s*:\s*(\d+)""").find(json)?.groupValues?.get(1)?.toInt() ?: 0
-            val comb = Regex(""""comb"\s*:\s*(\d+)""").find(json)?.groupValues?.get(1)?.toInt() ?: 0
-            val hodo = Regex(""""hodo"\s*:\s*(\d+)""").find(json)?.groupValues?.get(1)?.toInt() ?: 0
+            // CORREÇÃO: Usando JSONObject nativo para evitar falhas silenciosas de Regex
+            val jsonObject = JSONObject(json)
+            val vel  = jsonObject.optInt("vel", 0)
+            val rpm  = jsonObject.optInt("rpm", 0)
+            val comb = jsonObject.optInt("comb", 0)
+            val hodo = jsonObject.optInt("hodo", 0)
+
             _dados.value = DadosBLE(vel, rpm, comb, hodo)
         } catch (e: Exception) {
-            android.util.Log.e("WealthCar", "JSON inválido: $json", e)
+            android.util.Log.e("WealthCar", "JSON inválido ou incompleto: $json", e)
         }
     }
 
@@ -170,7 +158,7 @@ object BLEManager {
     }
 
     fun resetar() {
-        currentScanCallback?.let { scanner?.stopScan(it) } // ← usa o callback salvo
+        currentScanCallback?.let { scanner?.stopScan(it) }
         currentScanCallback = null
         _status.value = BLEStatus.DESCONECTADO
         _erro.value   = ""
