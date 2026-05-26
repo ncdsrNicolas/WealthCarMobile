@@ -175,4 +175,9 @@ object BLEManager {
         _status.value = BLEStatus.DESCONECTADO
         _erro.value   = ""
     }
+
+    fun conectarDispositivo(context: Context, device: BluetoothDevice) {
+        _status.value = BLEStatus.CONECTANDO
+        conectar(context, device)
+    }
 }

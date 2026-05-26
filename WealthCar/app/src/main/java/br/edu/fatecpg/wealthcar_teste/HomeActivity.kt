@@ -1,7 +1,13 @@
 package br.edu.fatecpg.wealthcar_teste
 
 import android.Manifest
+import android.app.Activity
+import android.bluetooth.BluetoothDevice
+import android.companion.AssociationRequest
+import android.companion.BluetoothLeDeviceFilter
+import android.companion.CompanionDeviceManager
 import android.content.Intent
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
@@ -12,14 +18,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import br.edu.fatecpg.wealthcar_teste.CarImageHelper
-import com.bumptech.glide.Glide
+import java.util.regex.Pattern
 
 @Serializable
 data class VeiculoResponse(
@@ -34,11 +40,20 @@ data class VeiculoResponse(
 
 class HomeActivity : AppCompatActivity() {
 
-    private val PERM_CODE = 101
+    /* ── Códigos de request ── */
+    private val PERM_CODE   = 101
+    private val SELECT_CODE = 102
+
+    /* ── Permissões necessárias ── */
     private val permissoes = arrayOf(
         Manifest.permission.BLUETOOTH_SCAN,
         Manifest.permission.BLUETOOTH_CONNECT,
     )
+
+    /* ── CompanionDeviceManager ── */
+    private val deviceManager by lazy {
+        getSystemService(CompanionDeviceManager::class.java)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +68,9 @@ class HomeActivity : AppCompatActivity() {
         val tvStatus         = findViewById<TextView>(R.id.tv_status_text)
         val fabBLE           = findViewById<FloatingActionButton>(R.id.fab_scanner)
         val btnPerfil        = findViewById<View>(R.id.card_profile)
+
+        /* ── Reseta estado BLE ao entrar ── */
+        BLEManager.resetar()
 
         /* ── Logout ── */
         btnPerfil.setOnClickListener {
@@ -105,13 +123,14 @@ class HomeActivity : AppCompatActivity() {
                     tvOdometerValue.text  = "${v.quilometragem_atual ?: 0} km"
                     tvFuelValue.text      = v.combustivel ?: "-"
 
-                    val ivCar = findViewById<ImageView>(R.id.iv_car_image)
+                    /* Imagem do carro via Supabase Storage */
+                    val ivCar    = findViewById<ImageView>(R.id.iv_car_image)
                     val imageUrl = CarImageHelper.getUrl(marca, modelo)
 
                     Glide.with(this@HomeActivity)
                         .load(imageUrl)
-                        .override(400, 300)          // ← força resolução uniforme
-                        .fitCenter()                 // ← escala mantendo proporção
+                        .override(400, 300)
+                        .fitCenter()
                         .placeholder(R.drawable.logo_wealthcar)
                         .error(R.drawable.logo_wealthcar)
                         .into(ivCar)
@@ -123,20 +142,20 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
-        /* ── BLE — FAB de conexão ── */
+        /* ── FAB BLE — abre seletor nativo ── */
         fabBLE.setOnClickListener {
-            if (temPermissoes()) {
-                if (BLEManager.status.value == BLEStatus.CONECTADO) {
-                    BLEManager.desconectar()
-                } else {
-                    BLEManager.escanear(this)
-                }
+            if (BLEManager.status.value == BLEStatus.CONECTADO) {
+                BLEManager.desconectar()
             } else {
-                pedirPermissoes()
+                if (temPermissoes()) {
+                    abrirSeletorBluetooth()
+                } else {
+                    pedirPermissoes()
+                }
             }
         }
 
-        /* Observer — status BLE → tv_status_text + ícone do FAB */
+        /* ── Observer: status BLE ── */
         lifecycleScope.launch {
             BLEManager.status.collectLatest { status ->
                 tvStatus.text = when (status) {
@@ -146,7 +165,6 @@ class HomeActivity : AppCompatActivity() {
                     BLEStatus.ERRO         -> "Erro de conexão"
                     BLEStatus.DESCONECTADO -> "Desconectado"
                 }
-                // Muda ícone do FAB conforme estado
                 fabBLE.setImageResource(
                     if (status == BLEStatus.CONECTADO)
                         android.R.drawable.ic_menu_close_clear_cancel
@@ -156,31 +174,81 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
-        /* Observer — dados BLE → atualiza cards existentes */
+        /* ── Observer: dados BLE ── */
         lifecycleScope.launch {
             BLEManager.dados.collectLatest { dados ->
                 dados?.let {
                     tvOdometerValue.text = "${it.hodo} km"
                     tvFuelValue.text     = "${it.comb}%"
-                    // Velocidade e RPM não têm card ainda no layout
-                    // Adicione cards no XML quando quiser exibi-los
                 }
             }
         }
 
-        /* Observer — erros BLE */
+        /* ── Observer: erros BLE ── */
         lifecycleScope.launch {
             BLEManager.erro.collectLatest { erro ->
                 if (erro.isNotEmpty()) showCustomToast(erro)
             }
         }
 
-        /* Back button */
+        /* ── Back button ── */
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { finishAffinity() }
         })
     }
 
+    /* ── Abre o seletor nativo de dispositivos BLE ── */
+    private fun abrirSeletorBluetooth() {
+        // Filtra dispositivos cujo nome começa com "WealthCar"
+        // Se quiser mostrar TODOS os BLE próximos, remova o setNamePattern
+        val filtro = BluetoothLeDeviceFilter.Builder().build()
+
+        val request = AssociationRequest.Builder()
+            .addDeviceFilter(filtro)
+            .setSingleDevice(false) // false = mostra lista; true = conecta no primeiro
+            .build()
+
+        deviceManager.associate(
+            request,
+            object : CompanionDeviceManager.Callback() {
+
+                /* Dispositivos encontrados — abre o seletor */
+                override fun onDeviceFound(chooserLauncher: IntentSender) {
+                    startIntentSenderForResult(
+                        chooserLauncher,
+                        SELECT_CODE,
+                        null, 0, 0, 0
+                    )
+                }
+
+                /* Nenhum dispositivo encontrado */
+                override fun onFailure(error: CharSequence?) {
+                    showCustomToast("Nenhum dispositivo WealthCar encontrado")
+                    android.util.Log.e("WealthCar", "BLE associate falhou: $error")
+                }
+            },
+            null
+        )
+    }
+
+    /* ── Recebe o dispositivo escolhido pelo usuário ── */
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == SELECT_CODE && resultCode == Activity.RESULT_OK) {
+            val device: BluetoothDevice? =
+                data?.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE)
+
+            if (device != null) {
+                BLEManager.conectarDispositivo(this, device)
+            } else {
+                showCustomToast("Nenhum dispositivo selecionado")
+            }
+        }
+    }
+
+    /* ── Helpers de permissão ── */
     private fun temPermissoes() = permissoes.all {
         ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
     }
@@ -196,8 +264,9 @@ class HomeActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERM_CODE &&
-            grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-            BLEManager.escanear(this)
+            grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+        ) {
+            abrirSeletorBluetooth() // tenta abrir após permissão concedida
         } else {
             showCustomToast("Permissões de Bluetooth necessárias")
         }
