@@ -237,22 +237,23 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@android:drawable/ic_menu_today"
+                android:src="@android:drawable/ic_media_play"
                 app:tint="@color/WC_blue" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Próxima Revisão"
+                android:text="Velocidade"
                 android:textColor="@color/gray_text"
                 android:textSize="12sp" />
 
             <TextView
-                android:id="@+id/tv_revision_value"
+                android:id="@+id/tv_speed_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="570 km"
+                tools:text="0 km/h"
+                android:text="-- km/h"
                 android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -283,23 +284,24 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@android:drawable/ic_menu_view"
+                android:src="@android:drawable/ic_media_ff"
                 app:tint="@color/WC_blue" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Saúde Geral"
+                android:text="Rotação"
                 android:textColor="@color/gray_text"
                 android:textSize="12sp" />
 
             <TextView
-                android:id="@+id/tv_health_value"
+                android:id="@+id/tv_rpm_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="Excelente"
-                android:textColor="@color/status_green"
+                tools:text="1.180 rpm"
+                android:text="-- rpm"
+                android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
         </LinearLayout>

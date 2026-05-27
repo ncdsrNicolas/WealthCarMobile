@@ -26,6 +26,12 @@ import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import java.text.NumberFormat
+import java.util.Locale
+
+/** Formata inteiro com separador de milhar pt-BR: 182125 → "182.125" */
+private fun formatarNumero(valor: Int): String =
+    NumberFormat.getNumberInstance(Locale("pt", "BR")).format(valor)
 
 @Serializable
 data class VeiculoResponse(
@@ -40,10 +46,13 @@ data class VeiculoResponse(
 
 class HomeActivity : AppCompatActivity() {
 
+    /* ── Códigos de request ── */
     private val PERM_CODE   = 101
     private val SELECT_CODE = 102
 
-    /* ── CORREÇÃO: Permissões dinâmicas baseadas na versão do Android ── */
+    /* ── CORREÇÃO: Permissões dinâmicas baseadas na versão do Android ──
+     * Android 12+ (S): BLUETOOTH_SCAN + BLUETOOTH_CONNECT
+     * Android < 12:    ACCESS_FINE_LOCATION (necessário para BLE scan)    */
     private val permissoes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
@@ -55,6 +64,7 @@ class HomeActivity : AppCompatActivity() {
         )
     }
 
+    /* ── CompanionDeviceManager ── */
     private val deviceManager by lazy {
         getSystemService(CompanionDeviceManager::class.java)
     }
@@ -63,17 +73,22 @@ class HomeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
+        /* ── Views ── */
         val tvVehicleName    = findViewById<TextView>(R.id.tv_vehicle_name)
         val tvPlateValue     = findViewById<TextView>(R.id.tv_plate_value)
         val tvOdometerValue  = findViewById<TextView>(R.id.tv_odometer_value)
         val tvFuelValue      = findViewById<TextView>(R.id.tv_fuel_value)
+        val tvSpeedValue     = findViewById<TextView>(R.id.tv_speed_value)
+        val tvRpmValue       = findViewById<TextView>(R.id.tv_rpm_value)
         val tvVehicleDetails = findViewById<TextView>(R.id.tv_vehicle_details)
         val tvStatus         = findViewById<TextView>(R.id.tv_status_text)
         val fabBLE           = findViewById<FloatingActionButton>(R.id.fab_scanner)
         val btnPerfil        = findViewById<View>(R.id.card_profile)
 
+        /* ── Reseta estado BLE ao entrar ── */
         BLEManager.resetar()
 
+        /* ── Logout ── */
         btnPerfil.setOnClickListener {
             lifecycleScope.launch {
                 try {
@@ -91,6 +106,7 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
+        /* ── Carrega sessão e veículo ── */
         lifecycleScope.launch {
             try {
                 val session = SupabaseClient.client.auth.currentSessionOrNull()
@@ -123,6 +139,7 @@ class HomeActivity : AppCompatActivity() {
                     tvOdometerValue.text  = "${v.quilometragem_atual ?: 0} km"
                     tvFuelValue.text      = v.combustivel ?: "-"
 
+                    /* Imagem do carro via Supabase Storage */
                     val ivCar    = findViewById<ImageView>(R.id.iv_car_image)
                     val imageUrl = CarImageHelper.getUrl(marca, modelo)
 
@@ -141,6 +158,7 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
+        /* ── FAB BLE — abre seletor nativo ── */
         fabBLE.setOnClickListener {
             if (BLEManager.status.value == BLEStatus.CONECTADO) {
                 BLEManager.desconectar()
@@ -153,6 +171,7 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
+        /* ── Observer: status BLE ── */
         lifecycleScope.launch {
             BLEManager.status.collectLatest { status ->
                 tvStatus.text = when (status) {
@@ -171,37 +190,51 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
+        /* ── Observer: dados BLE ── */
         lifecycleScope.launch {
             BLEManager.dados.collectLatest { dados ->
-                dados?.let {
-                    tvOdometerValue.text = "${it.hodo} km"
-                    tvFuelValue.text     = "${it.comb}%"
+                if (dados != null) {
+                    tvSpeedValue.text    = "${dados.vel} km/h"
+                    tvRpmValue.text      = formatarNumero(dados.rpm) + " rpm"
+                    tvOdometerValue.text = formatarNumero(dados.hodo) + " km"
+                    tvFuelValue.text     = "${dados.comb}%"
+                } else {
+                    // BLE desconectado — restaura placeholders
+                    tvSpeedValue.text    = "-- km/h"
+                    tvRpmValue.text      = "-- rpm"
+                    tvOdometerValue.text = "-- km"
+                    tvFuelValue.text     = "--%"
                 }
             }
         }
 
+        /* ── Observer: erros BLE ── */
         lifecycleScope.launch {
             BLEManager.erro.collectLatest { erro ->
                 if (erro.isNotEmpty()) showCustomToast(erro)
             }
         }
 
+        /* ── Back button ── */
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { finishAffinity() }
         })
     }
 
+    /* ── Abre o seletor nativo de dispositivos BLE ── */
     private fun abrirSeletorBluetooth() {
         val filtro = BluetoothLeDeviceFilter.Builder().build()
 
         val request = AssociationRequest.Builder()
             .addDeviceFilter(filtro)
-            .setSingleDevice(false)
+            .setSingleDevice(false) // false = mostra lista; true = conecta no primeiro
             .build()
 
         deviceManager.associate(
             request,
             object : CompanionDeviceManager.Callback() {
+
+                /* Dispositivos encontrados — abre o seletor */
                 override fun onDeviceFound(chooserLauncher: IntentSender) {
                     startIntentSenderForResult(
                         chooserLauncher,
@@ -210,6 +243,7 @@ class HomeActivity : AppCompatActivity() {
                     )
                 }
 
+                /* Nenhum dispositivo encontrado */
                 override fun onFailure(error: CharSequence?) {
                     showCustomToast("Nenhum dispositivo WealthCar encontrado")
                     android.util.Log.e("WealthCar", "BLE associate falhou: $error")
@@ -219,15 +253,19 @@ class HomeActivity : AppCompatActivity() {
         )
     }
 
+    /* ── Recebe o dispositivo escolhido pelo usuário ── */
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == SELECT_CODE && resultCode == Activity.RESULT_OK) {
-            val scanResult = data?.getParcelableExtra<android.bluetooth.le.ScanResult>(
-                CompanionDeviceManager.EXTRA_DEVICE
-            )
-            val device = scanResult?.device
+            // EXTRA_DEVICE pode ser ScanResult (BLE) ou BluetoothDevice (clássico)
+            val extra = data?.getParcelableExtra<android.os.Parcelable>(CompanionDeviceManager.EXTRA_DEVICE)
+            val device: BluetoothDevice? = when (extra) {
+                is android.bluetooth.le.ScanResult -> extra.device
+                is BluetoothDevice                 -> extra
+                else                               -> null
+            }
 
             if (device != null) {
                 BLEManager.conectarDispositivo(this, device)
@@ -238,6 +276,7 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    /* ── Helpers de permissão ── */
     private fun temPermissoes() = permissoes.all {
         ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
     }
